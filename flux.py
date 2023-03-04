@@ -9,6 +9,36 @@ from jaxopt import objective
 from jaxopt import prox
 
 
+#Limb-darkeing laws of g-, r-, i-, z-bands for EV Lac
+ld_star = jnp.array([[ 0.0218107,   2.22674688, -1.9960983,0.64901019],[-0.11589031,  2.15751326, -1.73046154,  0.51514061],[0.66485334,0.94296271,-1.23621597, 0.46103881,], [ 1.09204044, -0.02303873, -0.48276016,0.23430949,]])
+ld_spot = jnp.copy(ld_star)
+
+#Number of color
+num_color = ld_star.shape[0]
+
+#The flux of Unspotted photosphere 
+flux_lim = 1 - ld_star[0:num_color,0]/5. - ld_star[0:num_color,1]*2./6. - ld_star[0:num_color,2]*3./7. -ld_star[0:num_color,3]*4./8
+
+#The number of grids for latitude and longitude
+num_phi = 1801
+num_lam = 3601
+#Infinitesimal of latitude and longitude
+dphi = jnp.pi/(num_phi-1)
+dlam = jnp.pi*2./(num_lam-1)
+#Grid for latitude and longitude
+
+lat = jnp.linspace(-jnp.pi/2.,jnp.pi/2.,num_phi)
+
+num_lam = num_lam -1 
+lon = jnp.linspace(-jnp.pi,jnp.pi-dlam,num_lam)
+
+
+#Rotation period
+period = 4.359
+#Inclination angle
+incl = 60.*jnp.pi/180.
+
+
 
 #x,y,z-coordinate by inclination, latitude, and longitude 
 @jit
