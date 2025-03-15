@@ -2,6 +2,6 @@
 
 General code for mapping stellar surface featured by starspots and faculae with sparse modeling
 
-Multicolor photometry
+- Multicolor photometry
 
-High-resolution spectroscopy
+- High-resolution spectroscopy
