@@ -5,7 +5,7 @@ from scipy import special
 
 @custom_jvp
 def wofz(z):
-    result_shape = jax.ShapeDtypeStruct(z.shape, jnp.complex128)
+    result_shape = jax.ShapeDtypeStruct(z.shape, jnp.complex64)
     return jax.pure_callback(special.wofz, result_shape, z, vmap_method="expand_dims")
 
 @wofz.defjvp
