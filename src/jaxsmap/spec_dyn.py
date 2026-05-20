@@ -1,17 +1,15 @@
 import jax
 import jax.numpy as jnp
+import astropy 
 from jax import jit
 from jaxsmap.coord import spherical_grid
 from jaxsmap.fcn import voigt_profile
 
-C_LIGHT = 299792.458  # (km/s)
-period = 2.766 #(day)
-t_nor = 59665.276 #BJD-2400000
-
+c_light = 299792.458 #speed of light
 
 @jit
 def create_inst_kernel_velocity(vel_grid, inst_res):
-    fwhm_v = C_LIGHT / inst_res
+    fwhm_v = C_light / inst_res
     dv = vel_grid[1] - vel_grid[0]
     num_pts = 2 * int(3.0 * fwhm_v / dv) + 1
     v_g = jnp.linspace(-3.0 * fwhm_v, 3.0 * fwhm_v, num_pts)
