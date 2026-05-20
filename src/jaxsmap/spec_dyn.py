@@ -78,7 +78,7 @@ if __name__ == "__main__":
     depth = 0.1515
     local_f = 1.0 - (v_prof_norm * depth)
     obs_vel_grid = jnp.linspace(-32, 32, 200)
-    inst_kernel = create_inst_kernel_velocity(obs_vel_grid, inst_res=65000)
+    inst_kernel = create_inst_kernel_velocity(obs_vel_grid, inst_res=65000) #Velicity bin for GOES-RV
 
   
     incl_rad = jnp.deg2rad(60.)
