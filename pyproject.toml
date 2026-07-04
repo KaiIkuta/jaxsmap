@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jaxsmap"
+version = "0.1.0"
+description = "Sparse mapping of stellar surface with JAX"
+authors = [
+    { name = "Kai Ikuta" }
+]
+requires-python = ">=3.8"
+
+dependencies = [
+    "jax",
+    "scipy",
+    "jaxopt"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
