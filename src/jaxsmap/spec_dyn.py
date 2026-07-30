@@ -1,98 +1,93 @@
 import jax
 import jax.numpy as jnp
-import astropy 
 from jax import jit
-from jaxsmap.coord import spherical_grid
-from jaxsmap.fcn import voigt_profile
+from jax.tree_util import register_pytree_node_class
+from functools import partial
+from coord import StarGrid, limb_darkening, mu, vlos
+from fcn import voigt_profile
 
-c_light = 299792.458 #speed of light
+@register_pytree_node_class
+class DopplerImagingModel:
+    def __init__(self, grid: StarGrid, velocity_grid, inst_res=None):
+        self.grid = grid
+        self.vel_grid = jnp.asarray(velocity_grid)
+        self.n_grids = grid.num_grids
+        
+        if inst_res is not None and inst_res > 0:
+            C_LIGHT = 299792.458
+            fwhm_v = C_LIGHT / inst_res
+            dv = self.vel_grid[1] - self.vel_grid[0]
+            num_pts = 2 * int(3.0 * fwhm_v / dv) + 1
+            v_g = jnp.linspace(-3.0 * fwhm_v, 3.0 * fwhm_v, num_pts)
+            prof = (0.939437 / fwhm_v) * jnp.exp(-2.772589 * (v_g / fwhm_v)**2)
+            self.inst_kernel = jnp.array(prof / jnp.sum(prof))
+        else:
+            self.inst_kernel = jnp.array([1.0])
 
-@jit
-def create_inst_kernel_velocity(vel_grid, inst_res):
-    fwhm_v = C_light / inst_res
-    dv = vel_grid[1] - vel_grid[0]
-    num_pts = 2 * int(3.0 * fwhm_v / dv) + 1
-    v_g = jnp.linspace(-3.0 * fwhm_v, 3.0 * fwhm_v, num_pts)
-    prof = (0.939437 / fwhm_v) * jnp.exp(-2.772589 * (v_g / fwhm_v)**2)
-    return jnp.where(inst_res > 0, jnp.array(prof / jnp.sum(prof)), jnp.array([1.0]))
+    def tree_flatten(self):
+        children = (self.grid, self.vel_grid, self.inst_kernel)
+        aux_data = (self.n_grids,)
+        return (children, aux_data)
 
-@jit
-def mu(lat, lon,incl,phase):
-    lon_shifted = lon + 2.*jnp.pi*phase
-    return (jnp.sin(lat) * jnp.cos(incl) +
-          jnp.cos(lat) * jnp.sin(incl) * jnp.cos(lon_shifted))
-@jit
-def vlos(lat, lon, vsini, phase):
-    lon_shifted = lon + 2.0 * jnp.pi * phase
-    return vsini * jnp.cos(lat) * jnp.sin(lon_shifted)
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        obj = cls.__new__(cls)
+        obj.grid, obj.vel_grid, obj.inst_kernel = children
+        obj.n_grids = aux_data[0]
+        return obj
 
-@jit
-def limb_darkening(mu, u1=0.26853869, u2=0.70448628,u3=-0.30565246,u4=0.15820857): #Claret (2023): V-band, nonlinear
-    mu = jnp.maximum(mu, 0.0)
-    return 1.0 - u1 * (1.0 - mu**0.5) - u2 * (1.0 - mu) - u3 * (1.0 - mu**1.5) - u4 * (1.0 - mu**2)
+    @jax.jit
+    def _compute_profile_single(self, params, t_val, f_spot_flat, local_flux, local_vels):
+        period = params["period"]
+        incl_rad = params["incl"] * jnp.pi / 180.
+        vsini = params["vsini"]
+        u_spec = params["u_spec"]
+        spot_contrast = params["spot_contrast"]
 
-def shift_and_weight_pixel(pixel_vlos, pixel_intensity, pixel_mu, pixel_area,
-                           velocity_grid, local_profile_flux, local_profile_vels):
+        mu = mu(self.grid.lat_flat, self.grid.lon_flat, t_val, period, incl_rad)
+        vloss = vlos(self.grid.lat_flat, self.grid.lon_flat, t_val, period, vsini)
+        
+        is_visible = (mu > 0.0).astype(jnp.float32)
+        mu_clip = jnp.maximum(mu, 0.0)
 
-    is_visible = (pixel_mu > 0.0).astype(jnp.float32)
-    weight =  pixel_area * pixel_mu * limb_darkening(pixel_mu) * is_visible
+        I_star = limb_darkening(mu_clip, u_spec)
+        
 
-    shifted_profile = jnp.interp(
-        velocity_grid,
-        local_profile_vels + pixel_vlos,
-        1.-pixel_intensity *(1.-local_profile_flux),
-        left=1.0, right=1.0
-    )
+        base_weight = self.grid.areas * mu_clip * I_star * is_visible
+        pixel_intensity = 1.0 - f_spot_flat * (1.0 - spot_contrast)
 
-    return weight * (1.- shifted_profile), weight
+        def shift_and_weight(vlos_i, int_i, w_i):
+            shifted = jnp.interp(self.vel_grid, local_vels + vlos_i, 
+                                 1.0 - int_i * (1.0 - local_flux), 
+                                 left=1.0, right=1.0)
+            return w_i * (1.0 - shifted), w_i
 
-
-
-@jit
-def compute_flux(surface_map, lats, lons, areas, incl_rad,phase, vsini,
-                 velocity_grid, local_profile_flux, local_profile_vels,inst_kernel):
-    mus = mu(lats, lons, incl_rad, phase)
-    vloss = vlos(lats, lons, vsini, phase)
-
-    pixel_contribs, pixel_weights = vmap(
-        shift_and_weight_pixel,
-        in_axes=(0, 0, 0, 0, None, None, None)
-    )(vloss, surface_map, mus, areas, velocity_grid, local_profile_flux, local_profile_vels)
+        contribs, weights = jax.vmap(shift_and_weight)(vloss, pixel_intensity, base_weight)
+        
+        total_weight = jnp.maximum(jnp.sum(weights), 1e-10)
+        normalized_flux = 1.0 - (jnp.sum(contribs, axis=0) / total_weight)
 
 
-    total_weight = jnp.maximum(jnp.sum(pixel_weights, axis=0),1e-10)
+        pad_width = len(self.inst_kernel) // 2
+        return jnp.convolve(jnp.pad(normalized_flux, pad_width, mode='edge'), self.inst_kernel, mode='valid')
 
-    normalized_flux = 1.0 - (jnp.sum(pixel_contribs, axis=0) / total_weight)
-
-    pad_width = len(inst_kernel) // 2
-    return jnp.convolve(jnp.pad(normalized_flux, pad_width, mode='edge'), inst_kernel, mode='valid')
-
-
-#Parameters for Voigt profile (v_shift, sigma, gamma, depth) should be determined from the immaculate sphere
-if __name__ == "__main__":
-    grid = spherical_grid(n_lat=36, n_lon=72)
-    local_vels = jnp.linspace(-20, 20, 500)
-    v_shift = 0.3629
-    v_prof = voigt_profile(local_vels - v_shift, sigma=2.5732, gamma=2.4631)
-    v_prof_norm = v_prof / jnp.max(v_prof)
-    depth = 0.1515
-    local_f = 1.0 - (v_prof_norm * depth)
-    obs_vel_grid = jnp.linspace(-32, 32, 200)
-    inst_kernel = create_inst_kernel_velocity(obs_vel_grid, inst_res=65000) #Velicity bin for GOES-RV
-
-  
-    incl_rad = jnp.deg2rad(60.)
-    vsini=17.6
-    f_spot = 0.27
-    phase = jnp.array([0.,0.25,0.5,0.75,1.0])
-  
-    spotted_map = jnp.ones((len(phase),len(grid[0])))
-    for i in range(len(spotted_map[0])):
-        lon_shifted = grid[1] + 2.0 * jnp.pi * phase
-        dist = jnp.arccos(jnp.cos(grid[0])*jnp.cos(jnp.deg2rad(spot_lat))*jnp.cos(lon_shifted - jnp.deg2rad(spot_lon)) + jnp.sin(grid[0])*jnp.sin(jnp.deg2rad(spot_lat)))
-        spotted_map[i, dist < jnp.deg2rad(spot_rad)] = f_spot
-
-    mod_flux = compute_flux(
-        spotted_map, grid[0], grid[1], grid[2], incl_rad,
-        0.0, vsini, obs_vel_grid, local_f, local_vels, inst_kernel
-    )
+    @partial(jax.jit, static_argnums=(0,))
+    def compute_profiles(self, params, t, local_flux, local_vels):
+        f_spot = params.get("f_spot")
+        t_size = t.size
+        
+        if f_spot is not None:
+            f_size = f_spot.size
+            if f_size == self.n_grids:
+                f_spot = f_spot.reshape(1, self.n_grids)
+                mapped_fn = jax.vmap(self.__class__._compute_profile_single, in_axes=(None, None, 0, None, None, None))
+            elif f_size == t_size * self.n_grids:
+                f_spot = f_spot.reshape(t_size, self.n_grids)
+                mapped_fn = jax.vmap(self.__class__._compute_profile_single, in_axes=(None, None, 0, 0, None, None))
+            else:
+                raise ValueError("f_spot shape mismatch for Doppler Imaging.")
+            
+            params_safe = {**params, "f_spot": f_spot}
+            return mapped_fn(self, params_safe, t, local_flux, local_vels)
+        else:
+            raise ValueError("f_spot is missing from params.")
