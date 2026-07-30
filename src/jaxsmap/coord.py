@@ -18,30 +18,29 @@ def z_cart(phi, lam, incl):
   return jnp.cos(incl) * jnp.sin(phi)[:, None] + jnp.sin(incl) * jnp.cos(phi)[:, None] * jnp.cos(lam)[None, :]
 
 @jit
-def cart(phi, lam, incl):
-    return x_cart(phi, lam), y_cart(phi, lam, incl), z_cart(phi, lam, incl)
+def mu(lat_flat, lon_flat, t, period, incl_rad):
+    t = jnp.atleast_1d(t)
+    phase = t / period
+    lon_shifted = lon_flat[None, :] + 2.0 * jnp.pi * phase[:, None]
+    mu = jnp.sin(lat_flat)[None, :] * jnp.cos(incl_rad) + \
+         jnp.cos(lat_flat)[None, :] * jnp.sin(incl_rad) * jnp.cos(lon_shifted)
+    return jnp.squeeze(mu)
 
-@jit
-def spherical_grid(n_lat, n_lon):
-    lat_edges = jnp.linspace(-1.0, 1.0, n_lat + 1)
-    lats = jnp.arcsin((lat_edges[:-1] + lat_edges[1:]) / 2.0)
-    dlat = jnp.diff(jnp.arcsin(lat_edges))
-    dlam = jnp.pi * 2. / n_lon
-    lons = jnp.linspace(-jnp.pi + dlam/2.0, jnp.pi - dlam/2.0, n_lon)
-    lat_grid, lon_grid = jnp.meshgrid(lats, lons, indexing='ij')
-    areas = jnp.full_like(lat_flat, 2.0/n_lat* dlam)
-    return lat_grid.ravel(), lon_grid.ravel(), areas
+@jax.jit
+def vlos(lat_flat, lon_flat, t, period, vsini):
+    t = jnp.atleast_1d(t)
+    phase = t / period
+    lon_shifted = lon_flat[None, :] + 2.0 * jnp.pi * phase[:, None]
+    vlos = vsini * jnp.cos(lat_flat)[None, :] * jnp.sin(lon_shifted)
+    return jnp.squeeze(vlos)
 
-@jit
-def vlos(phi, lam, vsini):
-    return vsini * jnp.cos(phi) * jnp.sin(lam)
-
-@jit
-def limb_darkening(mu, ld):
-    return 1. - ld[0] * (1. - mu**0.5) - ld[1] * (1. - mu) - ld[2] * (1. - mu**1.5) - ld[3] * (1. - mu**2)
-
-
-
+@jax.jit
+def claret_limb_darkening(mu, c):
+    mu_clip = jnp.maximum(mu, 0.0)
+    return 1.0 - c[0]*(1.0 - mu_clip**0.5) \
+               - c[1]*(1.0 - mu_clip) \
+               - c[2]*(1.0 - mu_clip**1.5) \
+               - c[3]*(1.0 - mu_clip**2)
 
 @register_pytree_node_class
 class StarGrid:
