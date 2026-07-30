@@ -35,7 +35,7 @@ def vlos(lat_flat, lon_flat, t, period, vsini):
     return jnp.squeeze(vlos)
 
 @jax.jit
-def claret_limb_darkening(mu, c):
+def limb_darkening(mu, c):
     mu_clip = jnp.maximum(mu, 0.0)
     return 1.0 - c[0]*(1.0 - mu_clip**0.5) \
                - c[1]*(1.0 - mu_clip) \
