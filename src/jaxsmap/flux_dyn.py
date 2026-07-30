@@ -10,17 +10,14 @@ class SpottedFluxModel:
     def __init__(self, grid: StarGrid):
         self.grid = grid
 
-    @property
-    def lat(self):
-        return self.grid.lat_flat
+    def tree_flatten(self):
+        return ((self.grid,), None)
 
-    @property
-    def lon(self):
-        return self.grid.lon_flat
-
-    @property
-    def areas(self):
-        return self.grid.areas
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        obj = cls.__new__(cls)
+        obj.grid = children[0]
+        return obj
 
 
     @jax.jit
