@@ -1,6 +1,6 @@
-# jaxsmap: Sparse mapping of stellar surface with JAX
+# jaxsmap: Dynamical mapping and Doppler Imaging of stellar surface
 
-General code for mapping stellar surface featured by starspots and faculae with sparse modeling
+General code for mapping stellar surface featured by starspots and faculae
 
 - Multicolor photometry
 
