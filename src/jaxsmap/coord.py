@@ -17,6 +17,15 @@ def y_cart(phi, lam, incl):
 def z_cart(phi, lam, incl):
   return jnp.cos(incl) * jnp.sin(phi)[:, None] + jnp.sin(incl) * jnp.cos(phi)[:, None] * jnp.cos(lam)[None, :]
 
+
+@jit # Kipping 2013
+def q_to_u(q):
+    u1, u2 = 2.*(q[0]**0.5)*q[1], (q[0]**0.5)*(1.-2.*q[1])
+    return jnp.array([u1,u2])
+@jit # Ikuta et al. 2020
+def u_to_c(u):
+    return jnp.array([0.,u[0]+2*u[1],0.,-u[1]])
+
 @jit
 def mu(lat_flat, lon_flat, t, period, incl_rad):
     t = jnp.atleast_1d(t)
@@ -59,6 +68,17 @@ class StarGrid:
         self.lon_flat = lon_grid.ravel()
 
         self.areas = jnp.full_like(self.lat_flat, 2.0 / n_lat * dlam)
-        
-        # 全グリッド数
+
         self.num_grids = self.lat_flat.size
+
+    def tree_flatten(self):
+        children = (self.lat_flat, self.lon_flat, self.areas)
+        aux_data = (self.n_lat, self.n_lon, self.num_grids)
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        obj = cls.__new__(cls)
+        obj.lat_flat, obj.lon_flat, obj.areas = children
+        obj.n_lat, obj.n_lon, obj.num_grids = aux_data
+        return obj
