@@ -1,9 +1,10 @@
-import jax.numpy as jnp
 import jax
-from jax import random
-from jax import jit
+import jax.numpy as jnp
+from jax.tree_util import register_pytree_node_class
+from functools import partial
+from coord import StarGrid, flux_lim, limb_darkening, mu
 
-    
+@register_pytree_node_class
 class SpottedFluxModel:
     
     def __init__(self, grid: StarGrid):
@@ -54,26 +55,20 @@ class SpottedFluxModel:
         ld_spot = params["ld_spot"]
         f_spot = params["f_spot"]
 
-        cosb = self.cos_beta(t, period, incl_rad)
-        z = jnp.where(cosb < 0, 0.0, cosb)
+        mu = mu(self.grid.lat_flat, self.grid.lon_flat, t, period, incl_rad)
+        mu_clip = jnp.where(mu < 0, 0.0, mu)
 
-        ld_law = (ld_star[0] - f_spot * ld_spot[0]) * (1. - jnp.sqrt(z)) + \
-                 (ld_star[1] - f_spot * ld_spot[1]) * (1. - z) + \
-                 (ld_star[2] - f_spot * ld_spot[2]) * (1. - jnp.sqrt(z) * z) + \
-                 (ld_star[3] - f_spot * ld_spot[3]) * (1. - z * z)
-                 
-        integrand = self.grid.areas * z * ((1. - f_spot) - ld_law)
+        I_star = limb_darkening(mu_clip, ld_star)
+        I_spot = limb_darkening(mu_clip, ld_spot)
         
+        integrand = self.grid.areas * mu_clip * (I_star - f_spot * I_spot)
         return integrand / jnp.pi
 
     @jax.jit
     def _relative_flux_single(self, params, t):
         ld_star = params["ld_star"]
-        flux_lim = 1. - ld_star[0]/5. - ld_star[1]*2./6. - ld_star[2]*3./7. - ld_star[3]*4./8.
-        
         spot_contrib = jnp.sum(self._spotted_flux_single(params, t), axis=1)
-        
-        f = flux_lim - spot_contrib
+        f = flux_lim(ld_star) - spot_contrib
         f_ave = jnp.mean(f) + 1e-12
         return f / f_ave - 1.
 
