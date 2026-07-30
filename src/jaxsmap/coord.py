@@ -17,7 +17,13 @@ def y_cart(phi, lam, incl):
 def z_cart(phi, lam, incl):
   return jnp.cos(incl) * jnp.sin(phi)[:, None] + jnp.sin(incl) * jnp.cos(phi)[:, None] * jnp.cos(lam)[None, :]
 
+@jit
+def local_area(phi,lam,incl):
+    return jnp.cos(incl)*jnp.dot((jnp.sin(phi)*jnp.cos(phi)).reshape(-1,1),jnp.ones([lam.size]).reshape(1,-1))+jnp.sin(incl)*jnp.dot((jnp.cos(phi)**2).reshape(-1,1),jnp.cos(lam).reshape(1,-1))
 
+
+
+###
 @jit # Kipping 2013
 def q_to_u(q):
     u1, u2 = 2.*(q[0]**0.5)*q[1], (q[0]**0.5)*(1.-2.*q[1])
@@ -35,7 +41,7 @@ def mu(lat_flat, lon_flat, t, period, incl_rad):
          jnp.cos(lat_flat)[None, :] * jnp.sin(incl_rad) * jnp.cos(lon_shifted)
     return jnp.squeeze(mu)
 
-@jax.jit
+@jit
 def vlos(lat_flat, lon_flat, t, period, vsini):
     t = jnp.atleast_1d(t)
     phase = t / period
@@ -43,7 +49,11 @@ def vlos(lat_flat, lon_flat, t, period, vsini):
     vlos = vsini * jnp.cos(lat_flat)[None, :] * jnp.sin(lon_shifted)
     return jnp.squeeze(vlos)
 
-@jax.jit
+@jit
+def flux_lim(c):
+    return 1. - c[0]/5. - c[1]*2./6. - c[2]*3./7. -c[3]*4./8
+
+@jit
 def limb_darkening(mu, c):
     mu_clip = jnp.maximum(mu, 0.0)
     return 1.0 - c[0]*(1.0 - mu_clip**0.5) \
