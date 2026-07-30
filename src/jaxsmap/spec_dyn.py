@@ -38,7 +38,6 @@ class DopplerImagingModel:
         return obj
 
     @jax.jit
-    # 修正: 引数から f_spot_flat を消し、paramsから直接読み込む形に統一
     def _compute_profile_single(self, params, t_val, local_flux, local_vels):
         period = params["period"]
         incl_rad = params["incl"] * jnp.pi / 180.
@@ -46,7 +45,6 @@ class DopplerImagingModel:
         u_spec = params["u_spec"]
         spot_contrast = params["spot_contrast"]
         
-        # 追加: ここで f_spot を取得
         f_spot_flat = params["f_spot"]
 
         mu_val = mu(self.grid.lat_flat, self.grid.lon_flat, t_val, period, incl_rad)
@@ -82,21 +80,19 @@ class DopplerImagingModel:
         if f_spot is not None:
             f_size = f_spot.size
             
-            # 追加: params の動的な axes マッピングを作成
             axes_dict = {k: None for k in params.keys()}
             
             if f_size == self.n_grids:
                 f_spot = f_spot.reshape(1, self.n_grids)
-                axes_dict["f_spot"] = None # 時間方向にはブロードキャスト
+                axes_dict["f_spot"] = None
             elif f_size == t_size * self.n_grids:
                 f_spot = f_spot.reshape(t_size, self.n_grids)
-                axes_dict["f_spot"] = 0    # 時間方向(t)と同時にマップする
+                axes_dict["f_spot"] = 0
             else:
                 raise ValueError("f_spot shape mismatch for Doppler Imaging.")
             
             params_safe = {**params, "f_spot": f_spot}
             
-            # 修正: _compute_profile_single に渡す引数は (self, params, t, local_flux, local_vels) の5つ
             mapped_fn = jax.vmap(self.__class__._compute_profile_single, in_axes=(None, axes_dict, 0, None, None))
             return mapped_fn(self, params_safe, t, local_flux, local_vels)
         else:
