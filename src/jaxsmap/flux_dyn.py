@@ -94,7 +94,7 @@ class SpottedFluxModel:
                 f_spot = f_spot.reshape(num_color, t_size, n_grids)
                 f_spot_axis = 0
             else:
-                raise ValueError(f"Error the shape of the surface intensity: {f_f_spot.shape}")
+                raise ValueError(f"Error the shape of the surface intensity: {f_spot.shape}")
             params = {**params, "f_spot": f_spot}
 
         ld_star_axis = 0 if (ld_star is not None and jnp.ndim(ld_star) == 2) else None
