@@ -58,11 +58,17 @@ class DopplerImagingModel:
         
         pixel_intensity = 1.0 - f_spot_flat * (1.0 - spot_contrast)
 
+
         def shift_and_weight(vlos_i, int_i, w_i):
-            shifted = jnp.interp(self.vel_grid, local_vels + vlos_i, 
-                                 1.0 - int_i * (1.0 - local_flux), 
-                                 left=1.0, right=1.0)
-            return w_i * (1.0 - shifted), w_i
+            shifted_depth = jnp.interp(self.vel_grid, local_vels + vlos_i, 1.0 - local_flux, left=0.0, right=0.0)
+            spot_weight = w_i * int_i 
+            return spot_weight * shifted_depth, spot_weight
+
+    contribs, spot_weights = jax.vmap(shift_and_weight)(vloss, pixel_intensity, base_weight)
+    
+    # 瞬間の「スポットを考慮した真の連続光レベル」を分母にする
+    total_weight = jnp.maximum(jnp.sum(spot_weights), 1e-10)
+    normalized_flux = 1.0 - (jnp.sum(contribs, axis=0) / total_weight)
 
         contribs, weights = jax.vmap(shift_and_weight)(vloss, pixel_intensity, base_weight)
         
