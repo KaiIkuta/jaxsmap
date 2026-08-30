@@ -19,11 +19,7 @@ def max_entropy(rel_map, grid, hp):
 
 @jax.jit
 def l2_norm(b_map, grid, phases):
-import jax
-import jax.numpy as jnp
 
-@jax.jit
-def calc_l2_penalty(b_map, grid, phases):
     if b_map.ndim == 1:
         b_map = b_map.reshape(1, -1)
         
