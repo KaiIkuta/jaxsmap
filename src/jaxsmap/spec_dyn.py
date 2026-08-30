@@ -64,16 +64,10 @@ class DopplerImagingModel:
             spot_weight = w_i * int_i 
             return spot_weight * shifted_depth, spot_weight
 
-    contribs, spot_weights = jax.vmap(shift_and_weight)(vloss, pixel_intensity, base_weight)
-    
-    # 瞬間の「スポットを考慮した真の連続光レベル」を分母にする
-    total_weight = jnp.maximum(jnp.sum(spot_weights), 1e-10)
-    normalized_flux = 1.0 - (jnp.sum(contribs, axis=0) / total_weight)
-
-        contribs, weights = jax.vmap(shift_and_weight)(vloss, pixel_intensity, base_weight)
-        
-        total_weight = jnp.maximum(jnp.sum(weights), 1e-10)
+        contribs, spot_weights = jax.vmap(shift_and_weight)(vloss, pixel_intensity, base_weight)
+        total_weight = jnp.maximum(jnp.sum(spot_weights), 1e-10)
         normalized_flux = 1.0 - (jnp.sum(contribs, axis=0) / total_weight)
+
 
         pad_width = len(self.inst_kernel) // 2
         return jnp.convolve(jnp.pad(normalized_flux, pad_width, mode='edge'), self.inst_kernel, mode='valid')
