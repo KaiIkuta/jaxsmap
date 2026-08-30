@@ -18,7 +18,7 @@ def max_entropy(rel_map, grid, hp):
     return entropy
 
 @jax.jit
-def l2_norm(b_map, grid, phases):
+def tsv_norm(b_map, grid, phases):
 
     if b_map.ndim == 1:
         b_map = b_map.reshape(1, -1)
