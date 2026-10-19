@@ -51,7 +51,7 @@ def mu(lat_flat, lon_flat, t, period, domega):
 def vlos(lat_flat, lon_flat, t, period, vsini,domega):
     t = jnp.atleast_1d(t)
     omega_eq = 2.0 * jnp.pi / period
-    omega = calc_omega_lat(lat_flat, period, domega)
+    omega = omega_lat(lat_flat, period, domega)
     
     diffrot_factor = omega / omega_eq
     lon_shifted = lon_flat[None, :] + t[:, None] * omega[None, :]
