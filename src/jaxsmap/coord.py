@@ -33,20 +33,30 @@ def u_to_c(u):
     return jnp.array([0.,u[0]+2*u[1],0.,-u[1]])
 
 @jit
-def mu(lat_flat, lon_flat, t, period, incl_rad):
+def omega_lat(lat_flat, period, domega=0.0):
+    omega_eq = 2.0 * jnp.pi / period
+    return omega_eq - domega * (jnp.sin(lat_flat) ** 2)
+
+@jit
+def mu(lat_flat, lon_flat, t, period, domega):
     t = jnp.atleast_1d(t)
-    phase = t / period
-    lon_shifted = lon_flat[None, :] + 2.0 * jnp.pi * phase[:, None]
+    omega = omega_lat(lat_flat, period, domega)
+    lon_shifted = lon_flat[None, :] + t[:, None] * omega[None, :]
+    
     mu = jnp.sin(lat_flat)[None, :] * jnp.cos(incl_rad) + \
          jnp.cos(lat_flat)[None, :] * jnp.sin(incl_rad) * jnp.cos(lon_shifted)
     return jnp.squeeze(mu)
 
 @jit
-def vlos(lat_flat, lon_flat, t, period, vsini):
+def vlos(lat_flat, lon_flat, t, period, vsini,domega):
     t = jnp.atleast_1d(t)
-    phase = t / period
-    lon_shifted = lon_flat[None, :] + 2.0 * jnp.pi * phase[:, None]
-    vlos = vsini * jnp.cos(lat_flat)[None, :] * jnp.sin(lon_shifted)
+    omega_eq = 2.0 * jnp.pi / period
+    omega = calc_omega_lat(lat_flat, period, domega)
+    
+    diffrot_factor = omega / omega_eq
+    lon_shifted = lon_flat[None, :] + t[:, None] * omega[None, :]
+    
+    vlos = vsini * diffrot_factor[None, :] * jnp.cos(lat_flat)[None, :] * jnp.sin(lon_shifted)
     return jnp.squeeze(vlos)
 
 @jit
