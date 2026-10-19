@@ -1,4 +1,4 @@
-
+#To be developed for ZDI on Timau telescope
 
 
 @jit
@@ -75,34 +75,31 @@ if __name__ == "__main__":
     local_f = 1.0 - (v_prof_norm * depth)
     
     obs_vel_grid = jnp.linspace(-32, 32, 200)
-    inst_kernel = create_inst_kernel_velocity(obs_vel_grid, inst_res=65000) #Velocity bin for GOES-RV
+    inst_kernel = create_inst_kernel_velocity(obs_vel_grid, inst_res=65000)
 
     incl_rad = jnp.deg2rad(60.)
     vsini = 17.6
     f_spot = 0.27
     phases = jnp.array([0., 0.25, 0.5, 0.75, 1.0])
     
-    # Spotパラメータ（元のコードで未定義だった部分を補足）
     spot_lat = 30.0
     spot_lon = 0.0
     spot_rad = 20.0
     
-    # 1. Intensity Map (輝度マップ)
+
     dist = jnp.arccos(jnp.cos(lats)*jnp.cos(jnp.deg2rad(spot_lat))*jnp.cos(lons - jnp.deg2rad(spot_lon)) + jnp.sin(lats)*jnp.sin(jnp.deg2rad(spot_lat)))
     intensity_map = jnp.where(dist < jnp.deg2rad(spot_rad), f_spot, 1.0)
-    
-    # 2. Magnetic Map (磁場マップ: テスト用に同位置に動径方向磁場1000Gの磁気スポットを設定)
+
     b_max = 1000.0
     br_map = jnp.where(dist < jnp.deg2rad(spot_rad), b_max, 0.0)
     blat_map = jnp.zeros_like(lats)
     blon_map = jnp.zeros_like(lats)
     
-    # ゼーマン効果によるスケーリング係数 (4.67e-13 * lambda0(A) * geff * c(km/s))
+
     lambda_0 = 6000.0 # オングストローム
     geff = 1.2
     zeeman_factor = 4.67e-13 * lambda_0 * geff * c_light
     
-    # 複数位相(Phases)に対する計算をjax.vmapでベクトル化処理し高速化
     compute_phases = vmap(
         compute_stokes_IV,
         in_axes=(None, None, None, None, None, None, None, None, 0, None, None, None, None, None, None)
