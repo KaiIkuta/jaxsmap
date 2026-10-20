@@ -38,13 +38,13 @@ def omega_lat(lat_flat, period, domega=0.0):
     return omega_eq - domega * (jnp.sin(lat_flat) ** 2)
 
 @jit
-def mu(lat_flat, lon_flat, t, period, domega):
+def mu(lat_flat, lon_flat, t, period, incl, domega):
     t = jnp.atleast_1d(t)
     omega = omega_lat(lat_flat, period, domega)
     lon_shifted = lon_flat[None, :] + t[:, None] * omega[None, :]
     
-    mu = jnp.sin(lat_flat)[None, :] * jnp.cos(incl_rad) + \
-         jnp.cos(lat_flat)[None, :] * jnp.sin(incl_rad) * jnp.cos(lon_shifted)
+    mu = jnp.sin(lat_flat)[None, :] * jnp.cos(incl) + \
+         jnp.cos(lat_flat)[None, :] * jnp.sin(incl) * jnp.cos(lon_shifted)
     return jnp.squeeze(mu)
 
 @jit
