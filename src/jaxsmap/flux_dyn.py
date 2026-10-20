@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 from jax.tree_util import register_pytree_node_class
 from functools import partial
-from coord import StarGrid, flux_lim, limb_darkening, mu
+from .coord import StarGrid, limb_darkening, mu
 
 @register_pytree_node_class
 class SpottedFluxModel:
