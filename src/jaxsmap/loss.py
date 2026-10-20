@@ -32,14 +32,12 @@ def chi_square(mod_flux, obs_flux, obs_err, mask=None):
 
 
 @jax.jit
-def max_entropy(f_map, grid, def_val=1.0, max_val=None, eps=1e-6):
+def max_entropy(f_map, grid, def_val=1.0, max_val=1., eps=1e-6):
 
     if f_map.ndim == 1:
         f_map = f_map.reshape(1, -1)
     areas, _, _, _, _, _ = _extract_grid_geom(grid, f_map.shape[1])
-
-
-　　b = jnp.clip(f_map, eps, max_val - eps)
+    b = jnp.clip(f_map, eps, max_val - eps)
     m = jnp.clip(def_val, eps, max_val - eps)
     neg_s = b * jnp.log(b / m) + (max_val - b) * jnp.log((max_val - b) / (max_val - m))
 
@@ -152,5 +150,4 @@ def prox_group_l1_time(f_map, grid, lam_lr, shift=1.0, min_val=0.0, max_val=1.0)
     res = jnp.clip(res, min_val, max_val)
     return jnp.squeeze(res) if is_1d else res
     shifted_prox = prox.prox_lasso(b_map - shift, hyperparam_prox * scale * areas)
-
     return jnp.clip(shift + shifted_prox, 1e-6, 1.0)
