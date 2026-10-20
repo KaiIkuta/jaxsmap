@@ -3,8 +3,8 @@ import jax.numpy as jnp
 from jax import jit
 from jax.tree_util import register_pytree_node_class
 from functools import partial
-from coord import StarGrid, limb_darkening, mu, vlos
-from fcn import voigt_profile
+from .coord import StarGrid, limb_darkening, mu, vlos
+from .fcn import voigt_profile
 
 C_LIGHT = 299792.458  # km/s
 
