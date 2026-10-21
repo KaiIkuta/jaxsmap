@@ -2,7 +2,7 @@ from .coord import (
     StarGrid,
     u_to_c,
     limb_darkening,
-    calc_omega_lat,
+    omega_lat,
     mu,
     vlos,
 )
