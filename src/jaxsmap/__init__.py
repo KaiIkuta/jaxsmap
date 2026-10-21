@@ -15,7 +15,6 @@ from .loss import (
     tv_space_norm,
     tsv_space_norm,
     tsv_time_norm,
-    tsv_norm,
     l1_norm,
     group_l1_time_norm,
     l2_norm,
