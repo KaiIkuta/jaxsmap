@@ -37,8 +37,8 @@ class SpottedFluxModel:
         z3 = z3[None, :] * jnp.sin(phase)
         
         return z1 + z2 - z3
-
-　　@jax.jit
+        
+    @jax.jit
     def cos_phi_beta(self, phi_flat, lam_flat, t, period, incl_rad):
         cosb = self.cos_beta(t, period, incl_rad)
         phi_flat = self.grid.lat_flat
