@@ -42,7 +42,7 @@ class DopplerImagingModel:
     def get_wavelength_grid(self, vel_r):
         return (self.vel_grid - vel_r) / C_LIGHT * self.wl0 + self.wl0
 
-@jax.jit
+    @jax.jit
     def _compute_profile_single(self, params, t_val, vel_r):
         period = params["period"]
         incl_rad = params["incl"] * jnp.pi / 180.0
