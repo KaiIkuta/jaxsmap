@@ -18,7 +18,6 @@ from .loss import (
     l1_norm,
     group_l1_time_norm,
     l2_norm,
-    fused_lasso_loss,
     prox_l1,
     prox_group_l1_time,
 )
@@ -28,7 +27,7 @@ __all__ = [
     "StarGrid",
     "u_to_c",
     "limb_darkening",
-    "calc_omega_lat",
+    "omega_lat",
     "mu",
     "vlos",
     # fcn.py
@@ -44,11 +43,9 @@ __all__ = [
     "tv_space_norm",
     "tsv_space_norm",
     "tsv_time_norm",
-    "tsv_norm",
     "l1_norm",
     "group_l1_time_norm",
     "l2_norm",
-    "fused_lasso_loss",
     "prox_l1",
     "prox_group_l1_time",
 ]
