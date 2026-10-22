@@ -81,7 +81,7 @@ def tsv_space_norm(f_map, grid):
 
 
 @jax.jit
-def tsv_time_norm(f_map, grid, times, multiply_dt=True):
+def tsv_time_norm(f_map, grid, times):
 
     if f_map.ndim == 1 or f_map.shape[0] <= 1:
         return 0.0
@@ -90,7 +90,7 @@ def tsv_time_norm(f_map, grid, times, multiply_dt=True):
 
     dt = jnp.diff(times)[:, None]
     df_sq = jnp.diff(f_map, axis=0) ** 2
-    time_weight = dt if multiply_dt else 1.0 / (dt + 1e-8)
+    time_weight = 1.0 / (dt + 1e-8)
 
     return jnp.sum(areas[None, :] * time_weight * df_sq)
 
