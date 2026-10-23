@@ -9,7 +9,7 @@ _THETA = _K_IDX * jnp.pi / _M_WEIDEMAN
 _T_GRID = _L_WEIDEMAN * jnp.tan(0.5 * _THETA)
 _F_VALS = jnp.exp(-_T_GRID**2) * (_L_WEIDEMAN**2 + _T_GRID**2)
 _F_PADDED = jnp.concatenate(([0.0], _F_VALS))
-_POLY_COEFFS = jnp.fft.fft(np.fft.fftshift(_F_PADDED)).real / (2 * _M_WEIDEMAN)
+_POLY_COEFFS = jnp.fft.fft(jnp.fft.fftshift(_F_PADDED)).real / (2 * _M_WEIDEMAN)
 _POLY_COEFFS_REV = jnp.asarray(_POLY_COEFFS[1:_N_WEIDEMAN + 1][::-1], dtype=jnp.float64)
 
 
