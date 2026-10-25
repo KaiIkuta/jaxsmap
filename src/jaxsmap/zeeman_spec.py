@@ -96,7 +96,7 @@ if __name__ == "__main__":
     blon_map = jnp.zeros_like(lats)
     
 
-    lambda_0 = 6000.0 # オングストローム
+    lambda_0 = 6000.0
     geff = 1.2
     zeeman_factor = 4.67e-13 * lambda_0 * geff * c_light
     
