@@ -1,4 +1,4 @@
-#To be developed for ZDI on Timau telescope
+#To be developed for ZDI on Timau telescope (Stokes IVQU)
 
 
 @jit
@@ -62,7 +62,7 @@ def compute_stokes_IV(intensity_map, br_map, blat_map, blon_map, lats, lons, are
     return stokes_I_conv, stokes_V_conv
 
 
-
+"""
 if __name__ == "__main__":
     grid = spherical_grid(n_lat=36, n_lon=72)
     lats, lons, areas = grid[0], grid[1], grid[2]
@@ -111,6 +111,7 @@ if __name__ == "__main__":
     )
     
     print("Stokes I shape:", mod_flux_I.shape)
+"""    
     print("Stokes V shape:", mod_flux_V.shape)
 
 
